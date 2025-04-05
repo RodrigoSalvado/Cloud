@@ -20,6 +20,6 @@ def http_trigger(req: func.HttpRequest) -> func.HttpResponse:
         return func.HttpResponse(f"Hello, {name}. This HTTP triggered function executed successfully.")
     else:
         return func.HttpResponse(
-            "Bom dia, está a funcionar!",
+            "Bom dia, está a funcionar, com a branch main!",
              status_code=200
         )
