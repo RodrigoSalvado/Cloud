@@ -7,14 +7,6 @@ CLIENT_ID = os.getenv("REDDIT_CLIENT_ID")
 SECRET = os.getenv("REDDIT_SECRET")
 PASSWORD = os.getenv("REDDIT_PASSWORD")
 
-auth = requests.auth.HTTPBasicAuth(CLIENT_ID, SECRET)
-
-data = {
-    'grant_type': 'password',
-    'username': 'Major-Noise-6411',
-    'password': PASSWORD
-}
-
 
 app = func.FunctionApp(http_auth_level=func.AuthLevel.FUNCTION)
 
