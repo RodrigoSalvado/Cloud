@@ -1,12 +1,5 @@
 import azure.functions as func
 import logging
-import os
-import requests
-
-CLIENT_ID = os.getenv("REDDIT_CLIENT_ID")
-SECRET = os.getenv("REDDIT_SECRET")
-PASSWORD = os.getenv("REDDIT_PASSWORD")
-
 
 app = func.FunctionApp(http_auth_level=func.AuthLevel.FUNCTION)
 
@@ -14,29 +7,19 @@ app = func.FunctionApp(http_auth_level=func.AuthLevel.FUNCTION)
 def http_trigger(req: func.HttpRequest) -> func.HttpResponse:
     logging.info('Python HTTP trigger function processed a request.')
 
-    subreddit = req.params.get('subreddit')
-    if not subreddit:
+    name = req.params.get('name')
+    if not name:
         try:
             req_body = req.get_json()
         except ValueError:
             pass
         else:
-            subreddit = req_body.get('subreddit')
+            name = req_body.get('name')
 
-    topic = req.params.get('topic')
-    if not topic:
-        try:
-            req_body = req.get_json()
-        except ValueError:
-            pass
-        else:
-            topic = req_body.get('topic')
-
-
-    if subreddit and topic:
-        return func.HttpResponse(f"Subreddit: {subreddit}\nTopic: {topic}")
+    if name:
+        return func.HttpResponse(f"Hello, {name}. This HTTP triggered function executed successfully.")
     else:
         return func.HttpResponse(
-            "passe todos os params",
+             "This HTTP triggered function executed successfully. Pass a name in the query string or in the request body for a personalized response.",
              status_code=200
         )
