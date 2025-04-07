@@ -1,6 +1,10 @@
 import azure.functions as func
 import logging
 
+CLIENT_ID = os.getenv("REDDIT_CLIENT_ID")
+SECRET = os.getenv("REDDIT_SECRET")
+PASSWORD = os.getenv("REDDIT_PASSWORD")
+
 app = func.FunctionApp(http_auth_level=func.AuthLevel.FUNCTION)
 
 @app.route(route="http_trigger")
