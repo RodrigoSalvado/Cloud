@@ -20,7 +20,7 @@ app.http('httpTrigger', {
 
         const subreddit = request.query.get('subreddit');
         const sortType = request.query.get('sort') || 'new';
-        const num = parseInt(request.query.get('num')) || 100;
+        const num = parseInt(request.query.get('num')) || 20;
 
         if (!subreddit) {
             return {
