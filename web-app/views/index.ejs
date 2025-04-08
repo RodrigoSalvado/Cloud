@@ -67,22 +67,27 @@
     <h1>Pesquisar Posts no Reddit</h1>
 
     <div class="form-container">
-        <form id="redditForm">
-            <label for="subreddit">Subreddit:</label>
-            <input type="text" id="subreddit" name="subreddit" required>
-
-            <label for="sort">Ordenar por:</label>
-            <select id="sort" name="sort">
-                <option value="new">Novo</option>
-                <option value="hot">Popular</option>
-                <option value="top">Top</option>
-            </select>
-
-            <label for="num">Número de Resultados:</label>
-            <input type="number" id="num" name="num" value="50" min="1">
-
-            <input type="submit" value="Pesquisar">
-        </form>
+      <form 
+      action="https://teu-endpoint.azurewebsites.net/api/httpTrigger" 
+      method="GET" 
+      target="_blank"
+  >
+      <label for="subreddit">Subreddit:</label>
+      <input type="text" id="subreddit" name="subreddit" required>
+  
+      <label for="sort">Ordenar por:</label>
+      <select id="sort" name="sort">
+          <option value="new">Novo</option>
+          <option value="hot">Popular</option>
+          <option value="top">Top</option>
+      </select>
+  
+      <label for="num">Número de Resultados:</label>
+      <input type="number" id="num" name="num" value="50" min="1">
+  
+      <input type="submit" value="Pesquisar">
+  </form>
+  
     </div>
 
     <div id="resultContainer" class="result" style="display: none;">
