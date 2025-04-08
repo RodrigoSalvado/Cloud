@@ -1,20 +1,16 @@
 const { app } = require('@azure/functions');
 const axios = require('axios');
 const qs = require('qs');
-const { CosmosClient } = require("@azure/cosmos");
+const { CosmosClient } = require('@azure/cosmos');
 
 const CLIENT_ID = process.env.REDDIT_CLIENT_ID;
 const SECRET = process.env.REDDIT_SECRET;
 const USERNAME = process.env.REDDIT_USERNAME;
+
 const COSMOS_DB_ENDPOINT = process.env.COSMOS_DB_ENDPOINT;
 const COSMOS_DB_KEY = process.env.COSMOS_DB_KEY;
 const COSMOS_DB_DATABASE = process.env.COSMOS_DB_DATABASE;
 const COSMOS_DB_CONTAINER = process.env.COSMOS_DB_CONTAINER;
-
-const cosmosClient = new CosmosClient({
-    endpoint: COSMOS_DB_ENDPOINT,
-    key: COSMOS_DB_KEY
-});
 
 app.http('httpTrigger', {
     methods: ['GET', 'POST'],
@@ -40,8 +36,8 @@ app.http('httpTrigger', {
                 throw new Error("A variável de ambiente REDDIT_PASSWORD não está definida.");
             }
 
-            // Autenticação no Reddit
-            const tokenResponse = await axios.post('https://www.reddit.com/api/v1/access_token',
+            const tokenResponse = await axios.post(
+                'https://www.reddit.com/api/v1/access_token',
                 qs.stringify({
                     grant_type: 'password',
                     username: USERNAME,
@@ -61,53 +57,57 @@ app.http('httpTrigger', {
 
             const token = tokenResponse.data.access_token;
 
-            // Obter os posts
-            const redditRes = await axios.get(`https://oauth.reddit.com/r/${subreddit}/${sortType}`, {
-                headers: {
-                    'Authorization': `bearer ${token}`,
-                    'User-Agent': 'MyAPI/0.0.1'
-                },
-                params: { limit: num }
-            });
+            const redditRes = await axios.get(
+                `https://oauth.reddit.com/r/${subreddit}/${sortType}`,
+                {
+                    headers: {
+                        'Authorization': `bearer ${token}`,
+                        'User-Agent': 'MyAPI/0.0.1'
+                    },
+                    params: { limit: num }
+                }
+            );
 
             const posts = redditRes.data.data.children;
 
-            // Guardar na Cosmos DB
-            const container = cosmosClient.database(COSMOS_DB_DATABASE).container(COSMOS_DB_CONTAINER);
-
-            for (const post of posts) {
-                const postData = {
-                    id: post.data.id,  // Importante: o 'id' é obrigatório na Cosmos DB
-                    subreddit: post.data.subreddit,
-                    title: post.data.title,
-                    selftext: post.data.selftext,
-                    upvote_ratio: post.data.upvote_ratio,
-                    ups: post.data.ups,
-                    score: post.data.score,
-                    created_utc: post.data.created_utc
-                };
-
-                await container.items.upsert(postData);
-            }
-
-            // Preparar resposta
-            const result = posts.map(p => {
-                return `Subreddit: ${p.data.subreddit}\nTítulo: ${p.data.title}\nTexto: ${p.data.selftext}\nUpvote Ratio: ${p.data.upvote_ratio}\nUps: ${p.data.ups}\nScore: ${p.data.score}\n\n`;
-            });
-
-            if (result.length === 0) {
+            if (!posts || posts.length === 0) {
                 return {
                     status: 404,
                     body: "Nenhum post encontrado."
                 };
             }
 
-            const responseBody = result.join('\n');
+            // Conectar à base de dados Cosmos DB
+            const cosmosClient = new CosmosClient({ endpoint: COSMOS_DB_ENDPOINT, key: COSMOS_DB_KEY });
+            const database = cosmosClient.database(COSMOS_DB_DATABASE);
+            const container = database.container(COSMOS_DB_CONTAINER);
+
+            const result = [];
+
+            for (const post of posts) {
+                const doc = {
+                    id: post.data.id,
+                    title: post.data.title,
+                    text: post.data.selftext,
+                    subreddit: post.data.subreddit,
+                    upvote_ratio: post.data.upvote_ratio,
+                    ups: post.data.ups,
+                    score: post.data.score,
+                    created_utc: post.data.created_utc
+                };
+
+                try {
+                    await container.items.upsert(doc);
+                    result.push(`Subreddit: ${doc.subreddit}\nTítulo: ${doc.title}\nTexto: ${doc.text}\nUpvote Ratio: ${doc.upvote_ratio}\nUps: ${doc.ups}\nScore: ${doc.score}\n`);
+                } catch (err) {
+                    context.log.error(`Erro ao guardar o post ${doc.id}:`, err.message);
+                }
+            }
 
             return {
                 status: 200,
                 headers: { "Content-Type": "text/plain" },
-                body: responseBody
+                body: result.join('\n')
             };
 
         } catch (error) {
