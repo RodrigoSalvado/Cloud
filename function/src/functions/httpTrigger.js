@@ -64,7 +64,7 @@ app.http('httpTrigger', {
             // Formatar os posts como uma string para resposta
             const result = posts
                 .map(p => {
-                    return `Subreddit: ${p.data.subreddit}\nTítulo: ${p.data.title}\nTexto: ${p.data.selftext}\nUpvote Ratio: ${p.data.upvote_ratio}\nUps: ${p.data.ups}\nScore: ${p.data.score}\n\n`;
+                    return `Subreddit: ${p.data.subreddit}\nTitle: ${p.data.title}\nText: ${p.data.selftext}\nUpvote Ratio: ${p.data.upvote_ratio}\nUps: ${p.data.ups}\nScore: ${p.data.score}\n\n`;
                 });
 
             if (result.length === 0) {
