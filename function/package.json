@@ -9,7 +9,8 @@
   "dependencies": {
     "@azure/functions": "^4.0.0",
     "axios": "^1.5.0",
-    "qs": "^6.11.2"
+    "qs": "^6.11.2",
+    "@azure/cosmos": "^4.0.0"
   },
   "devDependencies": {},
   "main": "src/{index.js,functions/*.js}"
