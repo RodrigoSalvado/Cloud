@@ -36,6 +36,8 @@ app.http('httpTrigger', {
                 throw new Error("A variável de ambiente REDDIT_PASSWORD não está definida.");
             }
 
+            context.log("A obter token de acesso...");
+
             const tokenResponse = await axios.post(
                 'https://www.reddit.com/api/v1/access_token',
                 qs.stringify({
@@ -56,6 +58,9 @@ app.http('httpTrigger', {
             );
 
             const token = tokenResponse.data.access_token;
+            context.log("Token obtido com sucesso.");
+
+            context.log(`A buscar posts de r/${subreddit} (${sortType})...`);
 
             const redditRes = await axios.get(
                 `https://oauth.reddit.com/r/${subreddit}/${sortType}`,
@@ -77,14 +82,13 @@ app.http('httpTrigger', {
                 };
             }
 
-            // Conectar à base de dados Cosmos DB
+            context.log(`Recebidos ${posts.length} posts. A guardar na base de dados...`);
+
             const cosmosClient = new CosmosClient({ endpoint: COSMOS_DB_ENDPOINT, key: COSMOS_DB_KEY });
             const database = cosmosClient.database(COSMOS_DB_DATABASE);
             const container = database.container(COSMOS_DB_CONTAINER);
 
-            const result = [];
-
-            for (const post of posts) {
+            const upsertPromises = posts.map(post => {
                 const doc = {
                     id: post.data.id,
                     title: post.data.title,
@@ -95,19 +99,23 @@ app.http('httpTrigger', {
                     score: post.data.score,
                     created_utc: post.data.created_utc
                 };
+                return container.items.upsert(doc).catch(err => {
+                    context.log.error(`Erro ao guardar o post ${doc.id}: ${err.message}`);
+                });
+            });
 
-                try {
-                    await container.items.upsert(doc);
-                    result.push(`Subreddit: ${doc.subreddit}\nTítulo: ${doc.title}\nTexto: ${doc.text}\nUpvote Ratio: ${doc.upvote_ratio}\nUps: ${doc.ups}\nScore: ${doc.score}\n`);
-                } catch (err) {
-                    context.log.error(`Erro ao guardar o post ${doc.id}:`, err.message);
-                }
-            }
+            await Promise.all(upsertPromises);
+
+            context.log("Todos os posts foram guardados com sucesso.");
+
+            const resposta = posts.map(p => {
+                return `Subreddit: ${p.data.subreddit}\nTítulo: ${p.data.title}\nTexto: ${p.data.selftext}\nUpvote Ratio: ${p.data.upvote_ratio}\nUps: ${p.data.ups}\nScore: ${p.data.score}\n`;
+            });
 
             return {
                 status: 200,
                 headers: { "Content-Type": "text/plain" },
-                body: result.join('\n')
+                body: resposta.join('\n')
             };
 
         } catch (error) {
