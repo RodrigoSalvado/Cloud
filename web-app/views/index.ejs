@@ -99,7 +99,7 @@
             const sort = document.getElementById('sort').value;
             const num = document.getElementById('num').value;
 
-            const url = `https://your-function-url/api/httpTrigger?subreddit=${subreddit}&sort=${sort}&num=${num}`;
+            const url = `https://function-miniprojeto/api/httpTrigger?subreddit=${subreddit}&sort=${sort}&num=${num}`;
 
             try {
                 const response = await fetch(url, {
