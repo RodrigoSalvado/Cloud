@@ -1,16 +1,19 @@
 const { app } = require('@azure/functions');
 const axios = require('axios');
 const qs = require('qs');
-const { CosmosClient } = require('@azure/cosmos');
+const { QueueClient, StorageSharedKeyCredential } = require('@azure/storage-queue');
 
 const CLIENT_ID = process.env.REDDIT_CLIENT_ID;
 const SECRET = process.env.REDDIT_SECRET;
 const USERNAME = process.env.REDDIT_USERNAME;
+const REDDIT_PASSWORD = process.env.REDDIT_PASSWORD;
 
 const COSMOS_DB_ENDPOINT = process.env.COSMOS_DB_ENDPOINT;
 const COSMOS_DB_KEY = process.env.COSMOS_DB_KEY;
 const COSMOS_DB_DATABASE = process.env.COSMOS_DB_DATABASE;
 const COSMOS_DB_CONTAINER = process.env.COSMOS_DB_CONTAINER;
+
+const QUEUE_NAME = process.env.QUEUE_NAME; // Nome da fila
 
 app.http('httpTrigger', {
     methods: ['GET', 'POST'],
@@ -20,7 +23,7 @@ app.http('httpTrigger', {
 
         const subreddit = request.query.get('subreddit');
         const sortType = request.query.get('sort') || 'new';
-        const num = parseInt(request.query.get('num')) || 20;
+        const num = parseInt(request.query.get('num')) || 10;
 
         if (!subreddit) {
             return {
@@ -82,13 +85,15 @@ app.http('httpTrigger', {
                 };
             }
 
-            context.log(`Recebidos ${posts.length} posts. A guardar na base de dados...`);
+            // Criar o cliente para a fila do Azure Storage
+            const queueClient = new QueueClient(
+                `https://${process.env.AZURE_STORAGE_ACCOUNT_NAME}.queue.core.windows.net`,
+                QUEUE_NAME,
+                new StorageSharedKeyCredential(process.env.AZURE_STORAGE_ACCOUNT_NAME, process.env.AZURE_STORAGE_ACCOUNT_KEY)
+            );
 
-            const cosmosClient = new CosmosClient({ endpoint: COSMOS_DB_ENDPOINT, key: COSMOS_DB_KEY });
-            const database = cosmosClient.database(COSMOS_DB_DATABASE);
-            const container = database.container(COSMOS_DB_CONTAINER);
-
-            const upsertPromises = posts.map(post => {
+            // Enviar os posts para a fila
+            for (const post of posts) {
                 const doc = {
                     id: post.data.id,
                     title: post.data.title,
@@ -99,23 +104,16 @@ app.http('httpTrigger', {
                     score: post.data.score,
                     created_utc: post.data.created_utc
                 };
-                return container.items.upsert(doc);
-            });
-            
-            const results = await Promise.allSettled(upsertPromises);
-            context.log("Resultados do upsert:", results);
-            
 
-            context.log("Todos os posts foram guardados com sucesso.");
+                // Enviar os dados da fila como uma string JSON
+                await queueClient.sendMessage(JSON.stringify(doc));
+            }
 
-            const resposta = posts.map(p => {
-                return `Subreddit: ${p.data.subreddit}\nTítulo: ${p.data.title}\nTexto: ${p.data.selftext}\nUpvote Ratio: ${p.data.upvote_ratio}\nUps: ${p.data.ups}\nScore: ${p.data.score}\n`;
-            });
+            context.log("Posts enviados para a fila com sucesso.");
 
             return {
                 status: 200,
-                headers: { "Content-Type": "text/plain" },
-                body: resposta.join('\n')
+                body: "Os posts foram processados e estão a ser guardados em segundo plano."
             };
 
         } catch (error) {
