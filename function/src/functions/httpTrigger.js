@@ -99,12 +99,12 @@ app.http('httpTrigger', {
                     score: post.data.score,
                     created_utc: post.data.created_utc
                 };
-                return container.items.upsert(doc).catch(err => {
-                    context.log.error(`Erro ao guardar o post ${doc.id}: ${err.message}`);
-                });
+                return container.items.upsert(doc);
             });
-
-            await Promise.all(upsertPromises);
+            
+            const results = await Promise.allSettled(upsertPromises);
+            context.log("Resultados do upsert:", results);
+            
 
             context.log("Todos os posts foram guardados com sucesso.");
 
