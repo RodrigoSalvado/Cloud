@@ -2,9 +2,9 @@ const { app } = require('@azure/functions');
 const axios = require('axios');
 const qs = require('qs');
 
-const CLIENT_ID = process.env.REDDIT_CLIENT_ID || 'bzG6zHjC23GSenSIXe0M-Q';
-const SECRET = process.env.REDDIT_SECRET || 'DoywW0Lcc26rvDforDKkLOSQsUUwYA';
-const USERNAME = process.env.REDDIT_USERNAME || 'Major-Noise-6411';
+const CLIENT_ID = process.env.REDDIT_CLIENT_ID;
+const SECRET = process.env.REDDIT_SECRET;
+const USERNAME = process.env.REDDIT_USERNAME;
 
 app.http('httpTrigger', {
     methods: ['GET', 'POST'],
@@ -14,6 +14,7 @@ app.http('httpTrigger', {
 
         const subreddit = request.query.get('subreddit');
         const sortType = request.query.get('sort') || 'new';  // Pode ser 'new', 'hot', 'top', etc.
+        const num = parseInt(request.query.get('num')) || 100;  // Número de posts, com valor padrão de 100
 
         if (!subreddit) {
             return {
@@ -55,7 +56,7 @@ app.http('httpTrigger', {
                     'Authorization': `bearer ${token}`,
                     'User-Agent': 'MyAPI/0.0.1'
                 },
-                params: { limit: 100 }  // Definir o limite aqui
+                params: { limit: num }  // Definir o limite com o valor de num
             });
 
             const posts = redditRes.data.data.children;
