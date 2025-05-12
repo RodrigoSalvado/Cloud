@@ -1,4 +1,5 @@
 {
+  "scriptFile": "../fetchReddit/index.js",
   "bindings": [
     {
       "authLevel": "anonymous",

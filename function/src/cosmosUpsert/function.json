@@ -1,4 +1,5 @@
 {
+  "scriptFile": "../cosmosUpsert/index.js",
   "bindings": [
     {
       "type": "queueTrigger",
