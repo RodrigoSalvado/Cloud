@@ -1,0 +1,11 @@
+{
+  "bindings": [
+    {
+      "type": "queueTrigger",
+      "direction": "in",
+      "name": "myQueueItem",
+      "queueName": "reddit-posts-queue",
+      "connection": "AzureWebJobsStorage"
+    }
+  ]
+}
