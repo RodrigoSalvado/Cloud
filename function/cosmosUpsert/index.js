@@ -3,6 +3,7 @@
 
 const { CosmosClient } = require('@azure/cosmos');
 
+
 // Initialize Cosmos client once at module load
 const client = new CosmosClient({
   endpoint: process.env.COSMOS_DB_ENDPOINT,
