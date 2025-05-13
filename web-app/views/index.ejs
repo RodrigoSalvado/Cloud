@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="pt">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Reddit Search</title>
   <style>
     * {
@@ -16,9 +16,8 @@
       padding: 0;
       display: flex;
       justify-content: center;
-      align-items: flex-start;
-      min-height: 100vh;
-      padding-top: 2rem;
+      align-items: center;
+      height: 100vh;
     }
 
     .container {
@@ -27,7 +26,7 @@
       border-radius: 12px;
       box-shadow: 0 0 15px rgba(0,0,0,0.1);
       width: 100%;
-      max-width: 600px;
+      max-width: 400px;
     }
 
     h1 {
@@ -72,50 +71,19 @@
     button:hover {
       background-color: #e03e00;
     }
-
-    .results {
-      margin-top: 2rem;
-    }
-
-    .post {
-      border-bottom: 1px solid #ddd;
-      padding: 1rem 0;
-    }
-
-    .post:last-child {
-      border-bottom: none;
-    }
-
-    .post h2 {
-      margin: 0 0 0.5rem;
-      font-size: 1.1rem;
-      color: #333;
-    }
-
-    .post p {
-      margin: 0.25rem 0;
-      color: #555;
-      white-space: pre-wrap;
-    }
-
-    .error {
-      color: red;
-      margin-top: 1rem;
-      text-align: center;
-    }
   </style>
 </head>
 <body>
   <div class="container">
-    <h1>Buscar no Reddit</h1>
-    <form id="reddit-form">
+    <h1>Subreddit</h1>
+    <form action="https://function-miniprojeto.azurewebsites.net/api/httpTrigger" method="GET">
       <div>
         <label for="subreddit">Subreddit</label>
-        <input type="text" id="subreddit" name="subreddit" placeholder="ex: javascript" required />
+        <input type="text" id="subreddit" name="subreddit" placeholder="ex: " required>
       </div>
 
       <div>
-        <label for="sort">Ordenar por</label>
+        <label for="sort">Order by</label>
         <select id="sort" name="sort">
           <option value="new">New</option>
           <option value="hot">Hot</option>
@@ -126,124 +94,12 @@
       </div>
 
       <div>
-        <label for="num">Número de resultados</label>
-        <input
-          type="number"
-          id="num"
-          name="num"
-          min="1"
-          max="100"
-          value="10"
-          required
-        />
+        <label for="num">Number of results</label>
+        <input type="number" id="num" name="num" min="1" max="100" value="10" required>
       </div>
 
-      <button type="submit">Buscar</button>
+      <button type="submit" >Search</button>
     </form>
-
-    <div id="results" class="results"></div>
-    <div id="error" class="error"></div>
   </div>
-
-  <script>
-
-    require('dotenv').config();
-
-
-    const { app } = require('@azure/functions');
-    const axios = require('axios');
-    const qs = require('qs');
-
-    const CLIENT_ID = process.env.REDDIT_CLIENT_ID;
-    const SECRET = process.env.REDDIT_SECRET;
-    const USERNAME = process.env.REDDIT_USERNAME;
-
-    app.http('httpTrigger', {
-        methods: ['GET', 'POST'],
-        authLevel: 'anonymous',
-        handler: async (request, context) => {
-            context.log('A função HTTP foi chamada.');
-
-            const subreddit = request.query.get('subreddit');
-            const sortType = request.query.get('sort') || 'new';  // Pode ser 'new', 'hot', 'top', etc.
-            const num = parseInt(request.query.get('num')) || 100;  // Número de posts, com valor padrão de 100
-
-            if (!subreddit) {
-                return {
-                    status: 400,
-                    body: "Parâmetro 'subreddit' é obrigatório."
-                };
-            }
-
-            try {
-                const password = process.env.REDDIT_PASSWORD;
-
-                if (!password) {
-                    throw new Error("A variável de ambiente REDDIT_PASSWORD não está definida.");
-                }
-
-                const tokenResponse = await axios.post('https://www.reddit.com/api/v1/access_token',
-                    qs.stringify({
-                        grant_type: 'password',
-                        username: process.env.REDDIT_USERNAME,
-                        password: process.env.REDDIT_PASSWORD
-                    }),
-                    {
-                        auth: {
-                            username: process.env.REDDIT_CLIENT_ID,
-                            password: process.env.REDDIT_SECRET
-                        },
-                        headers: {
-                            'User-Agent': 'MyAPI/0.0.1',
-                            'Content-Type': 'application/x-www-form-urlencoded'
-                        }
-                    }
-                );
-
-                const token = tokenResponse.data.access_token;
-
-                // Alterar tipo de pesquisa (pode ser 'new', 'hot', 'top', etc.)
-                const redditRes = await axios.get(`https://oauth.reddit.com/r/${subreddit}/${sortType}`, {
-                    headers: {
-                        'Authorization': `bearer ${token}`,
-                        'User-Agent': 'MyAPI/0.0.1'
-                    },
-                    params: { limit: num }  // Definir o limite com o valor de num
-                });
-
-                const posts = redditRes.data.data.children;
-
-                // Formatar os posts como uma string para resposta
-                const result = posts
-                    .map(p => {
-                        return `Subreddit: ${p.data.subreddit}\nTitle: ${p.data.title}\nText: ${p.data.selftext}\n\n`;
-                    });
-
-                if (result.length === 0) {
-                    return {
-                        status: 404,
-                        body: "Nenhum post encontrado."
-                    };
-                }
-
-                // Juntar os posts numa única string
-                const responseBody = result.join('\n');
-
-                return {
-                    status: 200,
-                    headers: { "Content-Type": "text/plain" },
-                    body: responseBody
-                };
-
-            } catch (error) {
-                context.log.error('Erro:', error);
-                return {
-                    status: 500,
-                    body: `Erro interno: ${error.message}`
-                };
-            }
-        }
-    });
-  </script>
 </body>
 </html>
