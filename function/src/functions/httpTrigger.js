@@ -6,6 +6,7 @@ const CLIENT_ID = process.env.REDDIT_CLIENT_ID;
 const SECRET = process.env.REDDIT_SECRET;
 const USERNAME = process.env.REDDIT_USERNAME;
 
+
 app.http('httpTrigger', {
     methods: ['GET', 'POST'],
     authLevel: 'anonymous',
