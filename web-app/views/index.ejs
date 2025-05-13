@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="pt">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Reddit Search</title>
   <style>
     * {
@@ -16,8 +16,9 @@
       padding: 0;
       display: flex;
       justify-content: center;
-      align-items: center;
-      height: 100vh;
+      align-items: flex-start;
+      min-height: 100vh;
+      padding-top: 2rem;
     }
 
     .container {
@@ -26,7 +27,7 @@
       border-radius: 12px;
       box-shadow: 0 0 15px rgba(0,0,0,0.1);
       width: 100%;
-      max-width: 400px;
+      max-width: 600px;
     }
 
     h1 {
@@ -71,19 +72,50 @@
     button:hover {
       background-color: #e03e00;
     }
+
+    .results {
+      margin-top: 2rem;
+    }
+
+    .post {
+      border-bottom: 1px solid #ddd;
+      padding: 1rem 0;
+    }
+
+    .post:last-child {
+      border-bottom: none;
+    }
+
+    .post h2 {
+      margin: 0 0 0.5rem;
+      font-size: 1.1rem;
+      color: #333;
+    }
+
+    .post p {
+      margin: 0.25rem 0;
+      color: #555;
+      white-space: pre-wrap;
+    }
+
+    .error {
+      color: red;
+      margin-top: 1rem;
+      text-align: center;
+    }
   </style>
 </head>
 <body>
   <div class="container">
-    <h1>Subreddit</h1>
-    <form action="https://function-miniprojeto.azurewebsites.net/api/httpTrigger" method="GET">
+    <h1>Buscar no Reddit</h1>
+    <form id="reddit-form">
       <div>
         <label for="subreddit">Subreddit</label>
-        <input type="text" id="subreddit" name="subreddit" placeholder="ex: " required>
+        <input type="text" id="subreddit" name="subreddit" placeholder="ex: javascript" required />
       </div>
 
       <div>
-        <label for="sort">Order by</label>
+        <label for="sort">Ordenar por</label>
         <select id="sort" name="sort">
           <option value="new">New</option>
           <option value="hot">Hot</option>
@@ -94,12 +126,82 @@
       </div>
 
       <div>
-        <label for="num">Number of results</label>
-        <input type="number" id="num" name="num" min="1" max="100" value="10" required>
+        <label for="num">Número de resultados</label>
+        <input
+          type="number"
+          id="num"
+          name="num"
+          min="1"
+          max="100"
+          value="10"
+          required
+        />
       </div>
 
-      <button type="submit" >Search</button>
+      <button type="submit">Buscar</button>
     </form>
+
+    <div id="results" class="results"></div>
+    <div id="error" class="error"></div>
   </div>
+
+  <script>
+    document.getElementById('reddit-form').addEventListener('submit', async function(e) {
+      e.preventDefault();
+
+      const subreddit = document.getElementById('subreddit').value.trim();
+      const sort = document.getElementById('sort').value;
+      const num = document.getElementById('num').value;
+
+      const resultsEl = document.getElementById('results');
+      const errorEl = document.getElementById('error');
+      resultsEl.innerHTML = '';
+      errorEl.textContent = '';
+
+      if (!subreddit) {
+        errorEl.textContent = "Por favor, informe um subreddit.";
+        return;
+      }
+
+      const url = new URL('https://function-miniprojeto.azurewebsites.net/api/httpTrigger');
+      url.searchParams.set('subreddit', subreddit);
+      url.searchParams.set('sort', sort);
+      url.searchParams.set('num', num);
+
+      try {
+        const resp = await fetch(url.toString(), { method: 'GET' });
+        if (!resp.ok) {
+          const msg = await resp.text();
+          throw new Error(msg || `Erro ${resp.status}`);
+        }
+        const text = await resp.text();
+        const entries = text.trim().split('\n\n').filter(Boolean);
+
+        if (entries.length === 0) {
+          resultsEl.innerHTML = '<p>Nenhum post encontrado.</p>';
+          return;
+        }
+
+        for (const entry of entries) {
+          const lines = entry.split('\n');
+          const subredditLine = lines.find(l => l.startsWith('Subreddit:')) || '';
+          const titleLine = lines.find(l => l.startsWith('Title:')) || '';
+          const textLine = lines.find(l => l.startsWith('Text:')) || '';
+
+          const div = document.createElement('div');
+          div.className = 'post';
+          div.innerHTML = `
+            <h2>${titleLine.replace(/^Title:\s*/, '')}</h2>
+            <p><strong>Subreddit:</strong> ${subredditLine.replace(/^Subreddit:\s*/, '')}</p>
+            <p>${textLine.replace(/^Text:\s*/, '') || '<em>(sem texto)</em>'}</p>
+          `;
+          resultsEl.appendChild(div);
+        }
+      } catch (err) {
+        console.error(err);
+        errorEl.textContent = 'Erro ao buscar posts: ' + err.message;
+      }
+    });
+  </script>
 </body>
 </html>
